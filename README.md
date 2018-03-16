@@ -1,5 +1,8 @@
 # bamazon
 Node.js & MySQL Virtual Storefront
+- - -
+
+Uses Node, Inquirer, and MySQL to simulate a virtual storefront.
 
 ## Bamazon Customer
 Presents user with a list of products available for purchase that are pulled from a MySQL database.
