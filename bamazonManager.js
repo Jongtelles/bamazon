@@ -1,17 +1,15 @@
+// Boilerplate setup for mysql
 const mysql = require('mysql');
 const inquirer = require('inquirer')
 const connection = mysql.createConnection({
     host: "localhost",
     port: 3306,
-
-    // Your username
     user: "root",
-
-    // Your password
     password: "",
     database: "bamazon"
 });
 
+// main function that will ask for user input
 const start = () => {
     inquirer.prompt([{
         message: "Hi there Manager, what would you like to do?",
@@ -50,26 +48,44 @@ const viewProducts = () => {
         if (err) throw err;
         let productsArr = [];
         for (let i = 0; i < results.length; i++) {
-            let tableItem = `id: ${results[i].item_id} | product: ${results[i].product_name} | department: ${results[i].department_name} | price: $${results[i].price} | current stock: ${results[i].stock_quantity}`
+            let tableItem = `
+            id: ${results[i].item_id} | product: ${results[i].product_name} | department: ${results[i].department_name} | price: $${results[i].price} | current stock: ${results[i].stock_quantity}`
             productsArr.push(tableItem);
         }
-        console.log(productsArr);
+        console.log(`\n ${productsArr} \n`);
+        return ask();
+    });
+}
+
+const ask = () => {
+    inquirer.prompt([{
+        type: 'confirm',
+        name: 'ask',
+        message: 'Want to do something else? (just hit enter for yes) \n',
+        default: true
+    }]).then((answer) => {
+        if (answer.ask) {
+            start();
+        } else
+            return console.log(`Bye!`);
     });
 }
 
 const lowInventory = () => {
-    connection.query("SELECT * FROM products WHERE stock_quantity < 5", (err, results) => {
+    connection.query("SELECT * FROM products WHERE stock_quantity <= 5", (err, results) => {
         if (err) throw err;
         let productsArr = [];
         for (let i = 0; i < results.length; i++) {
-            let tableItem = `id: ${results[i].item_id} | product: ${results[i].product_name} | department: ${results[i].department_name} | price: $${results[i].price} | current stock: ${results[i].stock_quantity}`
+            let tableItem = `
+            id: ${results[i].item_id} | product: ${results[i].product_name} | department: ${results[i].department_name} | price: $${results[i].price} | current stock: ${results[i].stock_quantity}`;
             productsArr.push(tableItem);
         }
-        if (productsArr = []) {
-            console.log(`No products with less than 5 items in stock!`)
-            return
-        } else console.log(`Products with less than 5 items in stock:`);
-        console.log(productsArr);
+        if (results.length == 0) {
+            console.log(`\n No products with less than 5 items in stock! \n`)
+            return ask();
+        } else
+            console.log(`\n Products with less than 5 items in stock: ${productsArr} \n`);
+        return ask();
     });
 }
 
@@ -83,6 +99,7 @@ const productUpdater = (currentInv, stock, id) => {
     ], (err) => {
         if (err) throw err;
     });
+    return
 }
 
 const addInventory = () => {
@@ -103,20 +120,17 @@ const addInventory = () => {
             },
             {
                 name: "howMany",
-                type: "input",
+                type: "number",
                 message: "How many would you like to add?"
             }
         ]).then((answer) => {
-            let convertedChoice;
+            let converted = answer.choice.split('|');
+            converted = converted[0].split(':');
+            let convertedChoice = parseInt(converted[1].trim());
             let chosenItem;
             let additionalStock;
             let currentInv;
-            //TODO: since an object is not returned to the user, we need this hack to get the correct choice, it will not work with more than 10 inventoy items so I need to refactor
-            if (answer.choice[4] == 1 && answer.choice[5] == 0) {
-                convertedChoice = 10;
-            } else {
-                convertedChoice = parseInt(answer.choice[4]);
-            }
+            let tempId;
             for (let i = 0; i < results.length; i++) {
                 if (results[i].item_id === convertedChoice) {
                     chosenItem = results[i];
@@ -124,10 +138,13 @@ const addInventory = () => {
             }
             additionalStock = parseInt(answer.howMany);
             currentInv = parseInt(chosenItem.stock_quantity);
-            productUpdater(currentInv, additionalStock, chosenItem.item_id);
-            console.log(`Success! Added ${additionalStock} additional stock to ${chosenItem.product_name}`);
+            tempId = parseInt(chosenItem.item_id);
+            productUpdater(currentInv, additionalStock, tempId);
+            console.log(`\n Success! Added ${additionalStock} additional stock to ${chosenItem.product_name}. New current stock: ${currentInv + additionalStock}\n`);
+            return ask();
         });
     });
+
 }
 
 // Product Constructor
@@ -145,7 +162,6 @@ const newProduct = () => {
             name: "newProductName",
         },
         {
-            //TODO: update this to a list from the db
             message: "What department does the product belong to?",
             type: "input",
             name: "newProductDept",
@@ -162,20 +178,18 @@ const newProduct = () => {
         }
     ]).then((answer) => {
         let newProduct = new Product(answer.newProductName, answer.newProductDept, answer.newProductPrice, answer.newProductStock);
-        console.log(newProduct);
         let query = `INSERT INTO products (product_name, department_name, price, stock_quantity)
         VALUES ('${newProduct.name}', '${newProduct.dept}', ${newProduct.price}, ${newProduct.stock});`;
-        console.log(query);
         connection.query(query, (err, results) => {
             if (err) throw err;
-            else console.log('Success! Added new product to inventory:');
-            console.log(newProduct);
+            console.log(`\n Success! Added new product to inventory: ${JSON.stringify(newProduct)} \n`);
+            return ask();
         });
     });
 }
 
 connection.connect((err) => {
     if (err) throw err;
-    console.log("connected as id " + connection.threadId);
+    console.log(`connected as id ${connection.threadId}`);
     start();
 });

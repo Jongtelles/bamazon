@@ -3,21 +3,30 @@ const inquirer = require('inquirer');
 const connection = mysql.createConnection({
     host: "localhost",
     port: 3306,
-
-    // Your username
     user: "root",
-
-    // Your password
     password: "",
     database: "bamazon"
 });
+const ask = () => {
+    inquirer.prompt([{
+        type: 'confirm',
+        name: 'ask',
+        message: 'Want to buy something else? (just hit enter for yes) \n',
+        default: true
+    }]).then((answer) => {
+        if (answer.ask) {
+            start();
+        } else
+            return console.log(`Bye!`);
+    });
+}
 
 const start = () => {
     connection.query("SELECT * FROM products", (err, results) => {
         if (err) throw err;
         inquirer.prompt([{
-                message: "?",
-                type: "rawlist",
+                message: "What would you like to buy?",
+                type: "list",
                 name: "choice",
                 choices: () => {
                     let choiceArray = [];
@@ -34,14 +43,10 @@ const start = () => {
                 message: "How many would you like to buy?"
             }
         ]).then((answer) => {
+            let converted = answer.choice.split('|');
+            converted = converted[0].split(':');
             let chosenItem;
-            let convertedChoice;
-            //TODO: since an object is not returned to the user, we need this hack to get the correct choice, it will not work with more than 10 inventoy items so I need to refactor
-            if (answer.choice[4] == 1 && answer.choice[5] == 0) {
-                convertedChoice = 10;
-            } else {
-                convertedChoice = parseInt(answer.choice[4]);
-            }
+            let convertedChoice = parseInt(converted[1].trim());
             for (let i = 0; i < results.length; i++) {
                 if (results[i].item_id === convertedChoice) {
                     chosenItem = results[i];
@@ -58,12 +63,12 @@ const start = () => {
                     ],
                     (error) => {
                         if (err) throw err;
-                        console.log(`Purchase successful! Your total was:$${purchaseTotal}`);
-                        start();
+                        console.log(`Purchase successful! Your total is: $${purchaseTotal} \n`);
+                        return ask();
                     });
             } else {
-                console.log("Sorry, not enough in stock!")
-                start();
+                console.log("Sorry, not enough in stock! \n")
+                return ask();
             }
         });
     });
@@ -71,6 +76,6 @@ const start = () => {
 
 connection.connect((err) => {
     if (err) throw err;
-    console.log("connected as id " + connection.threadId);
+    console.log(`connected as id ${connection.threadId} \n`);
     start();
 });
