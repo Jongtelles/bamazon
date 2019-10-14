@@ -4,7 +4,7 @@
   "description": "Node and MySQL storefront",
   "main": "bamazonCustomer.js",
   "dependencies": {
-    "inquirer": "^5.1.0",
+    "inquirer": "^7.0.0",
     "mysql": "^2.15.0"
   },
   "devDependencies": {},
